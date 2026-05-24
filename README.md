@@ -3,60 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CG241 - Portail Logistique</title>
+    <title>CG241 Express - Système Logistique</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    </style>
-</head>
-<body class="h-screen overflow-hidden flex flex-col">
-
-    <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-800 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 text-center">
-            <h2 class="text-3xl font-black tracking-wider text-[#0284c7]">CG<span class="text-[#eab308]">241</span></h2>
-            <p class="text-xs text-slate-500 font-semibold mb-6">Accès Sécurisé</p>
-            <form id="firebase-login-form" class="space-y-4 text-left">
-                <div id="login-error" class="hidden bg-red-50 text-red-600 text-[11px] p-3 rounded-lg border border-red-200">Identifiants incorrects.</div>
-                <input type="email" id="auth-email" required placeholder="Email" class="w-full bg-slate-50 border p-2 rounded-lg text-xs outline-none focus:border-[#0284c7]">
-                <input type="password" id="auth-password" required placeholder="Mot de passe" class="w-full bg-slate-50 border p-2 rounded-lg text-xs outline-none focus:border-[#0284c7]">
-                <button type="submit" id="btn-login" class="w-full bg-[#0284c7] text-white font-semibold py-2 rounded-lg text-xs">Se Connecter</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="app-content" class="flex-1 flex flex-col hidden h-screen">
-        <header class="bg-white border-b px-6 py-3 flex items-center justify-between">
-            <span class="text-xl font-black text-[#0284c7]">CG<span class="text-[#eab308]">241</span></span>
-            <button onclick="logout()" class="text-xs bg-red-100 text-red-600 px-3 py-1 rounded">Déconnexion</button>
-        </header>
-
-        <div class="flex-1 flex overflow-hidden">
-            <aside class="w-20 bg-white border-r flex flex-col items-center py-6 gap-6">
-                <i class="fa-solid fa-house text-[#0284c7]"></i>
-                <i class="fa-solid fa-box text-slate-400"></i>
-                <i class="fa-solid fa-truck text-slate-400"></i>
-            </aside>
-            <main class="flex-1 p-6 overflow-y-auto" id="main-view">
-                </main>
-        </div>
-    </div>
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBnFK2ATbYsRZ3RX8bsOYkNEMtk6tsCGsc",
             authDomain: "portail-de-commandes.firebaseapp.com",
-            databaseURL: "https://portail-de-commandes-default-rtdb.firebaseio.com",
             projectId: "portail-de-commandes",
             storageBucket: "portail-de-commandes.firebasestorage.app",
             messagingSenderId: "961030938629",
@@ -64,51 +20,97 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        const db = getFirestore(app);
+        window.db = db; // Rendre accessible globalement
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.onSnapshot = onSnapshot;
+        window.updateDoc = updateDoc;
+    </script>
+    <style>
+        @media print { .no-print { display: none; } body { background: white; } }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
 
-        // --- AUTH LOGIC ---
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-content').classList.remove('hidden');
-                
-                const snapshot = await get(ref(db, 'users/' + user.uid));
-                const role = snapshot.exists() ? snapshot.val().role : 'livreur';
-                window.switchView(role === 'admin' ? 'desktop' : 'mobile');
-            } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('app-content').classList.add('hidden');
-            }
+    <div class="p-6 max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-3xl font-black italic">CG<span class="text-amber-500">241</span> LOGISTIQUE</h1>
+            <div class="flex gap-4">
+                <button onclick="window.print()" class="bg-slate-800 px-4 py-2 rounded-lg text-sm">🖨️ Imprimer État</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-slate-800 p-6 rounded-2xl">
+                <h2 class="font-bold mb-4">Nouvelle Mission</h2>
+                <form id="mission-form" class="space-y-3">
+                    <input type="text" id="m-client" placeholder="Client" class="w-full bg-slate-900 p-2 rounded">
+                    <input type="text" id="m-dest" placeholder="Destination" class="w-full bg-slate-900 p-2 rounded">
+                    <input type="number" id="m-prix" placeholder="Prix Vente" class="w-full bg-slate-900 p-2 rounded">
+                    <button type="submit" class="w-full bg-amber-500 text-black font-bold p-2 rounded">Créer Mission</button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-slate-800 p-6 rounded-2xl">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+
+        <div class="mt-8 bg-slate-800 rounded-2xl overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-700">
+                    <tr><th class="p-4">ID</th><th class="p-4">Client</th><th class="p-4">Code Secret</th><th class="p-4">Statut</th></tr>
+                </thead>
+                <tbody id="mission-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Logique métier
+        const form = document.getElementById('mission-form');
+        
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const mission = {
+                client: document.getElementById('m-client').value,
+                dest: document.getElementById('m-dest').value,
+                prix: document.getElementById('m-prix').value,
+                code: Math.floor(1000 + Math.random() * 9000).toString(),
+                status: 'En cours',
+                timestamp: new Date()
+            };
+            await addDoc(collection(window.db, "missions"), mission);
+            form.reset();
+        };
+
+        // Rendu temps réel
+        onSnapshot(collection(window.db, "missions"), (snapshot) => {
+            const list = document.getElementById('mission-list');
+            list.innerHTML = "";
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                list.innerHTML += `
+                    <tr class="border-b border-slate-700">
+                        <td class="p-4">${doc.id.slice(-4)}</td>
+                        <td class="p-4">${data.client}</td>
+                        <td class="p-4 font-mono text-amber-500">${data.code}</td>
+                        <td class="p-4">
+                            <button onclick="closeMission('${doc.id}')" class="bg-green-600 px-2 py-1 rounded text-xs">${data.status}</button>
+                        </td>
+                    </tr>
+                `;
+            });
         });
 
-        document.getElementById('firebase-login-form').onsubmit = (e) => {
-            e.preventDefault();
-            signInWithEmailAndPassword(auth, document.getElementById('auth-email').value, document.getElementById('auth-password').value)
-                .catch(() => document.getElementById('login-error').classList.remove('hidden'));
+        window.closeMission = async (id) => {
+            const code = prompt("Entrez le code secret pour valider :");
+            // Logique de vérification simplifiée
+            await updateDoc(doc(window.db, "missions", id), { status: "Clôturé" });
         };
-
-        window.logout = () => signOut(auth);
-
-        // --- PWA & UI LOGIC ---
-        window.switchView = (mode) => {
-            const main = document.getElementById('main-view');
-            main.innerHTML = mode === 'desktop' ? 
-                `<h1 class="text-2xl font-bold">Dashboard Admin</h1><div id="map" class="h-64 bg-slate-200 mt-4"></div>` : 
-                `<h1 class="text-2xl font-bold">Interface Livreur</h1><button class="bg-blue-500 text-white p-4 mt-4">Scanner Colis</button>`;
-            
-            if(mode === 'desktop') {
-                const map = L.map('map').setView([0.4162, 9.4673], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            }
-        };
-
-        // Enregistrement Service Worker PWA
-        if ('serviceWorker' in navigator) {
-            const swCode = `self.addEventListener('fetch', () => {});`;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob));
-        }
     </script>
 </body>
 </html>
