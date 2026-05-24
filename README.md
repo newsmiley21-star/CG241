@@ -1,748 +1,564 @@
-<!DOCTYPE html>
+pwa_code = """<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0b1329">
-    <title>CG241 Express & Shop - Plateforme de Production</title>
-    
-    <!-- Moteur Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Graphiques dynamiques de comptabilité analytique -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CG241 - Portail Logistique Global</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #0b1329;
-            color: #f8fafc;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
         }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-
-        /* Personnalisation de la barre de défilement */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0b1329; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #eab308; }
-
-        /* Effet Lock Screen */
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        #map-desktop, #map-mobile {
+            z-index: 1;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col md:flex-row antialiased relative">
+<body class="h-screen overflow-hidden flex flex-col">
 
-    <!-- ÉCRAN DE VERROUILLAGE (PIN par défaut: 2410) -->
-    <div id="lock-screen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0b1329] transition-opacity duration-500">
-        <div class="glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl flex flex-col items-center max-w-sm w-full mx-4">
-            <div class="w-16 h-16 bg-amber-500 text-blue-900 rounded-2xl flex items-center justify-center font-bold text-3xl shadow-lg shadow-amber-500/20 mb-6">
-                CG
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl font-black tracking-wider text-[#0284c7]">CG<span class="text-[#eab308]">241</span></span>
+                <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-1 rounded border border-slate-200">Global Logistics Portal</span>
             </div>
-            <h2 class="text-2xl font-bold text-white mb-2">Accès Restreint</h2>
-            <p class="text-slate-400 text-sm text-center mb-8">Veuillez entrer votre code PIN pour accéder à l'écosystème. <br><span class="text-xs text-amber-500">(Démo: 2410)</span></p>
-            
-            <div class="flex gap-3 mb-6">
-                <input type="password" id="pin-1" maxlength="1" class="w-12 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-2xl font-bold text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" onkeyup="moveToNext(this, 'pin-2')">
-                <input type="password" id="pin-2" maxlength="1" class="w-12 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-2xl font-bold text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" onkeyup="moveToNext(this, 'pin-3', 'pin-1')">
-                <input type="password" id="pin-3" maxlength="1" class="w-12 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-2xl font-bold text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" onkeyup="moveToNext(this, 'pin-4', 'pin-2')">
-                <input type="password" id="pin-4" maxlength="1" class="w-12 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-2xl font-bold text-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" onkeyup="moveToNext(this, null, 'pin-3')">
+            <div class="hidden md:flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button onclick="switchView('desktop')" id="btn-view-desktop" class="px-4 py-1.5 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid var(--fa-computer) fa-desktop"></i> Administration
+                </button>
+                <button onclick="switchView('mobile')" id="btn-view-mobile" class="px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-mobile-screen-button"></i> Application Client
+                </button>
             </div>
-            <button onclick="unlockApp()" class="w-full bg-amber-500 hover:bg-amber-600 text-blue-950 font-bold py-3 rounded-xl transition-all shadow-lg">
-                Déverrouiller
-            </button>
-            <p id="lock-error" class="text-rose-500 text-sm mt-4 hidden font-medium">Code incorrect. Réessayez.</p>
         </div>
-    </div>
 
-    <!-- SCRIPT PWA & VERROUILLAGE (Exécuté en premier) -->
-    <script>
-        // Logique de l'écran de verrouillage
-        const PIN_SECRET = "2410";
-        
-        function moveToNext(current, nextFieldID, prevFieldID) {
-            if (current.value.length >= 1 && nextFieldID) {
-                document.getElementById(nextFieldID).focus();
-            } else if (current.value.length === 0 && prevFieldID && event.key === "Backspace") {
-                document.getElementById(prevFieldID).focus();
-            }
-            if(event.key === "Enter") unlockApp();
-        }
-
-        function unlockApp() {
-            const p1 = document.getElementById('pin-1').value;
-            const p2 = document.getElementById('pin-2').value;
-            const p3 = document.getElementById('pin-3').value;
-            const p4 = document.getElementById('pin-4').value;
-            const pin = p1 + p2 + p3 + p4;
-
-            if (pin === PIN_SECRET) {
-                const lockScreen = document.getElementById('lock-screen');
-                lockScreen.classList.add('opacity-0');
-                setTimeout(() => { lockScreen.style.display = 'none'; }, 500);
-            } else {
-                document.getElementById('lock-error').classList.remove('hidden');
-                setTimeout(() => document.getElementById('lock-error').classList.add('hidden'), 3000);
-                ['pin-1', 'pin-2', 'pin-3', 'pin-4'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('pin-1').focus();
-            }
-        }
-
-        // --- GÉNÉRATION DYNAMIQUE DE LA PWA ---
-        // 1. Manifest
-        const manifest = {
-            name: "CG241 Express & Shop",
-            short_name: "CG241",
-            start_url: window.location.href,
-            display: "standalone",
-            background_color: "#0b1329",
-            theme_color: "#0b1329",
-            description: "Écosystème E-com & Logistique",
-            icons: [{
-                src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f59e0b'/><text x='50' y='50' font-family='sans-serif' font-size='40' fill='%231e3a8a' text-anchor='middle' alignment-baseline='middle' font-weight='bold'>CG</text></svg>",
-                sizes: "192x192 512x512",
-                type: "image/svg+xml"
-            }]
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-        const manifestUrl = URL.createObjectURL(manifestBlob);
-        const link = document.createElement('link');
-        link.rel = 'manifest'; link.href = manifestUrl;
-        document.head.appendChild(link);
-
-        // 2. Service Worker (Cache basique pour le mode hors-ligne)
-        const swCode = `
-            const CACHE_NAME = 'cg241-v1';
-            self.addEventListener('install', event => {
-                self.skipWaiting();
-            });
-            self.addEventListener('activate', event => {
-                event.waitUntil(self.clients.claim());
-            });
-            self.addEventListener('fetch', event => {
-                event.respondWith(
-                    fetch(event.request).catch(() => new Response('Hors ligne. Données mockées actives.', {status: 200, statusText: 'Offline'}))
-                );
-            });
-        `;
-        const swBlob = new Blob([swCode], { type: 'application/javascript' });
-        const swUrl = URL.createObjectURL(swBlob);
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register(swUrl).then(() => {
-                    console.log('Service Worker PWA enregistré avec succès.');
-                }).catch(err => console.log('Erreur SW:', err));
-            });
-        }
-    </script>
-
-    <!-- BARRE LATÉRALE DE NAVIGATION -->
-    <aside class="w-full md:w-68 bg-[#0f172a] border-b md:border-b-0 md:border-r border-slate-800 p-6 flex flex-col justify-between shrink-0">
-        <div>
-            <!-- Logo Identitaire CG241 -->
-            <div class="flex items-center gap-3 mb-8 pb-6 border-b border-slate-800">
-                <div class="w-11 h-11 bg-amber-500 text-blue-900 rounded-xl flex items-center justify-center font-bold text-2xl shadow-lg shadow-amber-500/20">
+        <div class="flex items-center gap-4">
+            <button class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors relative">
+                <i class="fa-regular fa-bell text-lg"></i>
+                <span class="absolute top-1 right-1 w-4 h-4 bg-red-500 text-[10px] text-white font-bold rounded-full flex items-center justify-center">1</span>
+            </button>
+            <button class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors">
+                <i class="fa-solid fa-gear text-lg"></i>
+            </button>
+            <div class="h-8 w-px bg-slate-200 mx-1"></div>
+            <div class="flex items-center gap-3 cursor-pointer p-1.5 hover:bg-slate-50 rounded-lg transition-colors">
+                <div class="w-9 h-9 rounded-full bg-[#0284c7] text-white font-bold flex items-center justify-center shadow-inner">
                     CG
                 </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight text-white tracking-wide">CG241 <span class="text-amber-500">Express</span></h1>
-                    <p class="text-xs text-slate-400">Écosystème E-com & Logistique</p>
+                <div class="hidden sm:block text-left">
+                    <div class="text-xs font-semibold text-slate-800">CG241 Admin</div>
+                    <div class="text-[10px] text-slate-500">Libreville, Gabon</div>
                 </div>
+                <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
             </div>
-
-            <!-- Menu Tactique -->
-            <nav class="space-y-2">
-                <button onclick="window.switchTab('vitrine')" id="btn-vitrine" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                    Vitrine Produits
-                </button>
-                <button onclick="window.switchTab('admin-dashboard')" id="btn-admin-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                    Admin & Comptabilité
-                </button>
-                <button onclick="window.switchTab('livreur-hub')" id="btn-livreur-hub" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 011-1v-2.5a1 1 0 01.293-.707l3.147-3.146A1 1 0 0118.854 8H21a1 1 0 011 1v7a1 1 0 01-1 1h-1m-6 0a1 1 0 001 1h2a1 1 0 001-1m-7 0a1 1 0 001 1h2a1 1 0 001-1"/></svg>
-                    Espace Livreurs
-                </button>
-                <button onclick="window.switchTab('archives')" id="btn-archives" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-                    Archives Clôturées
-                </button>
-            </nav>
         </div>
+    </header>
 
-        <!-- Indicateur de Connexion de Cloud -->
-        <div class="mt-6 pt-4 border-t border-slate-800">
-            <div class="flex items-center gap-2">
-                <span id="cloud-indicator" class="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
-                <span id="cloud-text" class="text-xs text-slate-400 font-medium">Connexion en cours...</span>
-            </div>
-            <button onclick="window.showToast('Système mis à jour !', 'success')" class="mt-4 w-full text-xs text-slate-500 hover:text-white flex items-center justify-center gap-1 transition-colors">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Paramètres Système
-            </button>
-        </div>
-    </aside>
+    <div class="flex flex-1 overflow-hidden relative">
 
-    <!-- ZONE PRINCIPALE DE L'APPLICATION -->
-    <main class="flex-1 p-6 md:p-8 overflow-y-auto w-full">
-
-        <!-- ONGLET 1 : VITRINE COMMERCIALE -->
-        <section id="tab-vitrine" class="tab-content active space-y-6 max-w-6xl mx-auto">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">Catalogue & Vitrine de Vente</h2>
-                    <p class="text-sm text-slate-400">Gérez vos articles en stock avec les contraintes d'achat en gros (MOQ).</p>
-                </div>
-                <button onclick="window.openModal('product-modal')" class="bg-amber-500 hover:bg-amber-600 text-blue-950 font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Ajouter un Article
-                </button>
-            </div>
-
-            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <!-- Injecté par JavaScript -->
-            </div>
-        </section>
-
-        <!-- ONGLET 2 : DASHBOARD ADMIN & COMPTABILITÉ -->
-        <section id="tab-admin-dashboard" class="tab-content space-y-6 max-w-6xl mx-auto">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">Direction Administrative</h2>
-                    <p class="text-sm text-slate-400">Suivi rigoureux des indicateurs analytiques.</p>
-                </div>
-                <button onclick="window.exportDataBackup()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Sauvegarder les données
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Chiffre d'Affaires Brut</span>
-                    <div class="text-2xl font-bold text-emerald-400 mt-1" id="admin-ca">0 FCFA</div>
-                </div>
-                <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Coûts Logistiques</span>
-                    <div class="text-2xl font-bold text-rose-400 mt-1" id="admin-co">0 FCFA</div>
-                </div>
-                <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 shadow-sm">
-                    <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Marge Nette (Bénéfice)</span>
-                    <div class="text-2xl font-bold text-amber-400 mt-1" id="admin-marge">0 FCFA</div>
-                </div>
-            </div>
-
-            <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 shadow-sm">
-                <h3 class="font-bold text-base text-white mb-4">Aperçu Visuel de Rentabilité Réelle</h3>
-                <div class="h-64 relative w-full">
-                    <canvas id="financialChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                <div class="px-6 py-4 bg-slate-900/40 border-b border-slate-800 flex justify-between items-center">
-                    <h3 class="font-bold text-base text-white">Création & Supervision des Expéditions</h3>
-                    <button onclick="window.openModal('order-modal')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 py-2 rounded-lg transition-all">
-                        + Nouvelle Mission
+        <div id="view-desktop" class="flex flex-1 overflow-hidden w-full transition-all duration-300">
+            <aside class="w-16 md:w-20 bg-white border-r border-slate-200 flex flex-col items-center py-6 justify-between shrink-0">
+                <div class="flex flex-col gap-5 w-full px-2">
+                    <button class="w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-[#0284c7] hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-house text-lg"></i>
+                        <span class="text-[9px] font-medium hidden md:block">Accueil</span>
+                    </button>
+                    <button class="w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 text-[#0284c7] bg-sky-50 border border-sky-100 font-semibold transition-all">
+                        <i class="fa-solid fa-box text-lg"></i>
+                        <span class="text-[9px] font-medium hidden md:block">Commandes</span>
+                    </button>
+                    <button class="w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-[#0284c7] hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-calendar-days text-lg"></i>
+                        <span class="text-[9px] font-medium hidden md:block">Planning</span>
+                    </button>
+                    <button class="w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-[#0284c7] hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-truck text-lg"></i>
+                        <span class="text-[9px] font-medium hidden md:block">Flotte</span>
+                    </button>
+                    <button class="w-full aspect-square rounded-xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-[#0284c7] hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-chart-line text-lg"></i>
+                        <span class="text-[9px] font-medium hidden md:block">Rapports</span>
                     </button>
                 </div>
-                <div class="overflow-x-auto w-full">
-                    <table class="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                            <tr class="border-b border-slate-800 text-[11px] font-semibold uppercase text-slate-400 bg-slate-900/60">
-                                <th class="py-3 px-6">ID Mission</th>
-                                <th class="py-3 px-6">Client / Destination</th>
-                                <th class="py-3 px-6">Prix Vente</th>
-                                <th class="py-3 px-6">Coût Transport</th>
-                                <th class="py-3 px-6 text-amber-400">Code Secret Validation</th>
-                                <th class="py-3 px-6">Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-orders-tbody" class="text-sm divide-y divide-slate-800/50">
-                            <!-- Injecté par JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+                
+                <button class="w-12 h-12 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                </button>
+            </aside>
 
-        <!-- ONGLET 3 : HUB DES LIVREURS -->
-        <section id="tab-livreur-hub" class="tab-content space-y-6 max-w-6xl mx-auto">
-            <div>
-                <h2 class="text-2xl font-bold text-white tracking-tight">Tableau de Mission des Livreurs</h2>
-                <p class="text-sm text-slate-400">Interface de terrain. Demandez le code secret à l'administration pour valider la livraison.</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="livreur-missions-container">
-                <!-- Injecté dynamiquement -->
-            </div>
-        </section>
-
-        <!-- ONGLET 4 : ARCHIVES CLÔTURÉES -->
-        <section id="tab-archives" class="tab-content space-y-6 max-w-6xl mx-auto">
-            <div>
-                <h2 class="text-2xl font-bold text-white tracking-tight">Archives Historiques</h2>
-                <p class="text-sm text-slate-400">Toutes les missions validées et clôturées.</p>
-            </div>
-            <div class="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                <div class="overflow-x-auto w-full">
-                    <table class="w-full text-left border-collapse min-w-[700px]">
-                        <thead>
-                            <tr class="border-b border-slate-800 text-[11px] font-semibold uppercase text-slate-400 bg-slate-900/60">
-                                <th class="py-3 px-6">ID Archive</th>
-                                <th class="py-3 px-6">Client & Zone</th>
-                                <th class="py-3 px-6">CA Encaissé</th>
-                                <th class="py-3 px-6">Coût Solder</th>
-                                <th class="py-3 px-6 text-emerald-400">Statut Historique</th>
-                            </tr>
-                        </thead>
-                        <tbody id="archives-tbody" class="text-sm divide-y divide-slate-800/50">
-                            <!-- Injecté par JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- ================= MODALS & TOASTS ================= -->
-
-    <!-- TOAST NOTIFICATIONS CONTENEUR -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- MODAL CONFIRMATION CUSTOM (Remplace alert/confirm) -->
-    <div id="confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-[8000]">
-        <div class="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center">
-            <h3 class="font-bold text-white text-lg mb-2" id="confirm-title">Confirmation</h3>
-            <p class="text-slate-400 text-sm mb-6" id="confirm-msg">Êtes-vous sûr ?</p>
-            <div class="flex gap-3 justify-center">
-                <button onclick="window.closeConfirmModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-700">Annuler</button>
-                <button id="confirm-action-btn" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-sm font-bold hover:bg-rose-600">Confirmer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL : AJOUT PRODUIT -->
-    <div id="product-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <h3 class="font-bold text-white">Ajouter un Article</h3>
-                <button onclick="window.closeModal('product-modal')" class="text-slate-400 hover:text-white text-xl">&times;</button>
-            </div>
-            <form id="product-form" onsubmit="window.saveProduct(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nom du Produit</label>
-                    <input type="text" id="p-name" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+            <main class="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6">
+                <div class="flex items-center justify-between">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Prix U. (FCFA)</label>
-                        <input type="number" id="p-price" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
+                        <h1 class="text-xl font-bold text-slate-800">Tableau de Bord de Commandes</h1>
+                        <p class="text-xs text-slate-500">Gestion opérationnelle en temps réel - Région Estuaire, Libreville</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Stock dispo</label>
-                        <input type="number" id="p-stock" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
+                    <div id="connection-status" class="flex items-center gap-2 text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Mode Connecté
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">MOQ (Qté Minimum)</label>
-                    <input type="number" id="p-moq" value="1" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Photo (Fichier Local)</label>
-                    <input type="file" id="p-image" accept="image/*" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-400 file:mr-4 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-blue-950 hover:file:bg-amber-600">
-                </div>
-                <div class="pt-4 border-t border-slate-800 flex justify-end gap-2">
-                    <button type="button" onclick="window.closeModal('product-modal')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-medium">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-amber-500 text-blue-950 rounded-xl text-xs font-bold hover:bg-amber-600">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- MODAL : CRÉATION MISSION -->
-    <div id="order-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-[#0f172a] border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <h3 class="font-bold text-white">Ordre de Mission</h3>
-                <button onclick="window.closeModal('order-modal')" class="text-slate-400 hover:text-white text-xl">&times;</button>
-            </div>
-            <form id="order-form" onsubmit="window.saveOrder(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Destinataire</label>
-                    <input type="text" id="o-customer" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Zone (Quartier)</label>
-                    <input type="text" id="o-zone" required placeholder="Ex: Akanda, Owendo" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Prix Course (FCFA)</label>
-                        <input type="number" id="o-price" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Coût Logistique</label>
-                        <input type="number" id="o-cost" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500">
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-slate-800 flex justify-end gap-2">
-                    <button type="button" onclick="window.closeModal('order-modal')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-medium">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700">Lancer Mission</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ================= SCRIPT & LOGIQUE MODULAIRE ================= -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need (Version Modulaire v10)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        // Configuration Firebase fournie
-        const firebaseConfig = {
-            apiKey: "AIzaSyBnFK2ATbYsRZ3RX8bsOYkNEMtk6tsCGsc",
-            authDomain: "portail-de-commandes.firebaseapp.com",
-            databaseURL: "https://portail-de-commandes-default-rtdb.firebaseio.com",
-            projectId: "portail-de-commandes",
-            storageBucket: "portail-de-commandes.firebasestorage.app",
-            messagingSenderId: "961030938629",
-            appId: "1:961030938629:web:0f3d43445b8b358014bc6c",
-            measurementId: "G-7ZKSRQS4T3"
-        };
-
-        let db = null;
-        let localProducts = [];
-        let localOrders = [];
-        let finChart = null;
-
-        // --- GESTIONNAIRE DE TOASTS & MODALS ---
-        window.showToast = (message, type = 'info') => {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const bg = type === 'success' ? 'bg-emerald-500' : (type === 'error' ? 'bg-rose-500' : 'bg-blue-500');
-            toast.className = `${bg} text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium transform transition-all duration-300 translate-y-4 opacity-0 flex items-center gap-2`;
-            toast.innerHTML = type === 'success' ? `✓ ${message}` : (type === 'error' ? `⚠ ${message}` : `ℹ ${message}`);
-            container.appendChild(toast);
-            
-            // Animation d'entrée
-            setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
-            // Auto destruction
-            setTimeout(() => {
-                toast.classList.add('translate-y-4', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        };
-
-        window.openConfirmModal = (title, message, callback) => {
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-msg').innerText = message;
-            document.getElementById('confirm-modal').classList.remove('hidden');
-            const btn = document.getElementById('confirm-action-btn');
-            btn.onclick = () => {
-                callback();
-                window.closeConfirmModal();
-            };
-        };
-        window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
-
-        // Initialisation de Firebase
-        try {
-            const app = initializeApp(firebaseConfig);
-            const analytics = getAnalytics(app);
-            db = getFirestore(app);
-            
-            document.getElementById('cloud-indicator').className = "w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]";
-            document.getElementById('cloud-text').innerText = "Firebase Cloud (Modulaire) Connecté";
-            document.getElementById('cloud-text').className = "text-xs text-emerald-400 font-medium";
-            syncFirebaseData();
-        } catch (e) {
-            console.error("Erreur Firebase:", e);
-            document.getElementById('cloud-indicator').className = "w-2.5 h-2.5 bg-amber-500 rounded-full";
-            document.getElementById('cloud-text').innerText = "Mode Hors-Ligne (Données Locales)";
-            document.getElementById('cloud-text').className = "text-xs text-amber-500 font-medium";
-            loadMockData();
-        }
-
-        function loadMockData() {
-            localProducts = [
-                { id: "P-001", name: "Huile Moteur Synthétique", price: 15000, stock: 45, moq: 5, image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%231e293b'/><text x='100' y='100' font-family='sans-serif' font-size='14' fill='%2394a3b8' text-anchor='middle' alignment-baseline='middle'>Image Produit</text></svg>" }
-            ];
-            localOrders = [
-                { id: "CG-8821", customer: "Garage Central", zone: "Charbonnages", price: 2500, cost: 1000, secretCode: "2417", status: "En cours" },
-                { id: "CG-4491", customer: "Client Particulier", zone: "Akanda", price: 5000, cost: 1500, secretCode: "9931", status: "Clôturé" }
-            ];
-            refreshUI();
-        }
-
-        function syncFirebaseData() {
-            if (!db) return;
-            onSnapshot(collection(db, "produits"), (snapshot) => {
-                localProducts = [];
-                snapshot.forEach(docSnap => { let d = docSnap.data(); d.fbId = docSnap.id; localProducts.push(d); });
-                refreshUI();
-            }, (error) => { console.error("Erreur lecture produits", error); loadMockData(); });
-
-            onSnapshot(collection(db, "missions"), (snapshot) => {
-                localOrders = [];
-                snapshot.forEach(docSnap => { let d = docSnap.data(); d.fbId = docSnap.id; localOrders.push(d); });
-                refreshUI();
-            }, (error) => console.error("Erreur lecture missions", error));
-        }
-
-        // --- EXPORTATION (Attaché à Window pour l'HTML) ---
-        window.exportDataBackup = () => {
-            const backupData = {
-                date_export: new Date().toISOString(),
-                nombre_produits: localProducts.length,
-                nombre_missions: localOrders.length,
-                catalogue_produits: localProducts,
-                historique_missions: localOrders
-            };
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "cg241_sauvegarde_" + Date.now() + ".json");
-            document.body.appendChild(downloadAnchorNode); 
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-            
-            window.showToast("Sauvegarde JSON téléchargée avec succès !", "success");
-        };
-
-        // --- GESTION PRODUITS ---
-        window.saveProduct = (e) => {
-            e.preventDefault();
-            const file = document.getElementById('p-image').files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(event) {
-                const base64Image = event.target.result;
-                const newProd = {
-                    id: "P-" + Date.now().toString().slice(-4),
-                    name: document.getElementById('p-name').value,
-                    price: parseFloat(document.getElementById('p-price').value) || 0,
-                    stock: parseInt(document.getElementById('p-stock').value) || 0,
-                    moq: parseInt(document.getElementById('p-moq').value) || 1,
-                    image: base64Image
-                };
-
-                try {
-                    if (db) {
-                        await addDoc(collection(db, "produits"), newProd);
-                    } else {
-                        localProducts.push(newProd);
-                        refreshUI();
-                    }
-                    window.showToast("Article ajouté au catalogue !", "success");
-                    window.closeModal('product-modal'); 
-                    document.getElementById('product-form').reset();
-                } catch(err) {
-                    window.showToast("Erreur lors de l'ajout", "error");
-                    console.error(err);
-                }
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.deleteProduct = (prodId, fbId) => {
-            window.openConfirmModal("Suppression d'Article", "Voulez-vous vraiment supprimer définitivement cet article du catalogue ?", async () => {
-                if (db && fbId) {
-                    await deleteDoc(doc(db, "produits", fbId));
-                } else {
-                    localProducts = localProducts.filter(p => p.id !== prodId);
-                    refreshUI();
-                }
-                window.showToast("Article supprimé.", "info");
-            });
-        };
-
-        // --- GESTION MISSIONS ---
-        window.saveOrder = async (e) => {
-            e.preventDefault();
-            const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            const newOrder = {
-                id: "CG-" + Math.floor(1000 + Math.random() * 9000),
-                customer: document.getElementById('o-customer').value,
-                zone: document.getElementById('o-zone').value,
-                price: parseFloat(document.getElementById('o-price').value) || 0,
-                cost: parseFloat(document.getElementById('o-cost').value) || 0,
-                secretCode: randomCode,
-                status: "En cours"
-            };
-
-            try {
-                if (db) {
-                    await addDoc(collection(db, "missions"), newOrder);
-                } else {
-                    localOrders.push(newOrder);
-                    refreshUI();
-                }
-                window.showToast("Nouvelle mission logistique créée !", "success");
-                window.closeModal('order-modal'); 
-                document.getElementById('order-form').reset();
-            } catch(err) {
-                window.showToast("Erreur création mission", "error");
-            }
-        };
-
-        window.verifyAndCloseMission = async (orderId, fbId, inputElementId) => {
-            const typedCode = document.getElementById(inputElementId).value;
-            const targetOrder = localOrders.find(o => o.id === orderId);
-
-            if (targetOrder && targetOrder.secretCode === typedCode.trim()) {
-                if (db && fbId) {
-                    await updateDoc(doc(db, "missions", fbId), { status: "Clôturé" });
-                } else {
-                    targetOrder.status = "Clôturé";
-                    refreshUI();
-                }
-                window.showToast("Code valide ! Mission archivée.", "success");
-            } else {
-                window.showToast("Code de validation incorrect.", "error");
-            }
-        };
-
-        // --- RENDU UI ---
-        function refreshUI() {
-            const grid = document.getElementById('products-grid');
-            grid.innerHTML = "";
-            localProducts.forEach(p => {
-                grid.innerHTML += `
-                    <div class="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-lg flex flex-col hover:border-slate-600 transition-colors">
-                        <div class="h-48 overflow-hidden bg-slate-900 border-b border-slate-800 relative">
-                            <img src="${p.image}" class="w-full h-full object-cover" alt="Produit" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'200\\\' height=\\\'200\\\'><rect width=\\\'200\\\' height=\\\'200\\\' fill=\\\'%231e293b\\\'/><text x=\\\'100\\\' y=\\\'100\\\' font-family=\\\'sans-serif\\\' font-size=\\\'14\\\' fill=\\\'%2394a3b8\\\' text-anchor=\\\'middle\\\' alignment-baseline=\\\'middle\\\'>Erreur Image</text></svg>'">
-                        </div>
-                        <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                            <div>
-                                <h4 class="font-bold text-base text-white leading-tight truncate">${p.name}</h4>
-                                <div class="text-xs text-slate-400 mt-1">Ref: <span class="font-mono text-amber-500">${p.id}</span></div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    
+                    <div class="xl:col-span-1 space-y-6 flex flex-col">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="bg-[#eab308] text-white px-4 py-3 font-semibold text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus-circle"></i> Commander une Livraison
                             </div>
-                            <div class="grid grid-cols-2 gap-2 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 text-xs">
-                                <div><span class="text-slate-500 block">Stock:</span> <span class="text-white font-semibold">${p.stock}</span></div>
-                                <div><span class="text-slate-500 block">MOQ:</span> <span class="text-amber-400 font-bold">${p.moq}</span></div>
-                            </div>
-                            <div class="flex items-center justify-between pt-1">
-                                <span class="text-lg font-extrabold text-emerald-400">${p.price.toLocaleString('fr-FR')} F</span>
-                                <button onclick="window.deleteProduct('${p.id}', '${p.fbId || ''}')" class="text-xs bg-slate-800 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg transition-all">
-                                    Supprimer
+                            <form id="orderForm" onsubmit="handleNewOrder(event)" class="p-4 space-y-3.5">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Origine</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-location-dot absolute left-3 top-3 text-slate-400 text-xs"></i>
+                                        <input type="text" id="origin" required value="Libreville, Gabon (Charbonnages)" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:bg-white focus:border-[#0284c7] outline-none transition-all">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Destination</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-location-crosshairs absolute left-3 top-3 text-slate-400 text-xs"></i>
+                                        <select id="destination" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:bg-white focus:border-[#0284c7] outline-none transition-all appearance-none cursor-pointer">
+                                            <option value="Owendo, Gabon">Owendo, Gabon</option>
+                                            <option value="Akanda, Gabon">Akanda, Gabon</option>
+                                            <option value="Libreville, Gabon (PK9)">Libreville, Gabon (PK9)</option>
+                                            <option value="Libreville, Gabon (Nombakélé)">Libreville, Gabon (Nombakélé)</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-[10px] pointer-events-none"></i>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Poids (kg)</label>
+                                        <input type="text" id="weight" required value="200 kg" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:bg-white focus:border-[#0284c7] outline-none transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Priorité</label>
+                                        <div class="relative">
+                                            <select id="priority" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:bg-white focus:border-[#0284c7] outline-none transition-all appearance-none cursor-pointer">
+                                                <option value="Immédiat">Immédiat</option>
+                                                <option value="Standard">Standard</option>
+                                            </select>
+                                            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-[10px] pointer-events-none"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Type de Colis</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-box-open absolute left-3 top-3 text-slate-400 text-xs"></i>
+                                        <select id="packageType" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:bg-white focus:border-[#0284c7] outline-none transition-all appearance-none cursor-pointer">
+                                            <option value="Pièces Détachées / Moto">Pièces Détachées / Moto</option>
+                                            <option value="Marchandises Générales">Marchandises Générales</option>
+                                            <option value="Électronique / High-Tech">Électronique / High-Tech</option>
+                                        </select>
+                                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-[10px] pointer-events-none"></i>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-[#0284c7] hover:bg-sky-700 text-white font-semibold py-2.5 rounded-lg text-xs transition-colors shadow-md flex items-center justify-center gap-2 mt-2">
+                                    <i class="fa-solid fa-paper-plane"></i> Commander
                                 </button>
+                            </form>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 text-xl border border-slate-200">
+                                    <i class="fa-solid fa-barcode"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-800">Scanner Analytique</h4>
+                                    <p class="text-[11px] text-slate-500">Génération automatique de labels QR</p>
+                                </div>
+                            </div>
+                            <button onclick="triggerLabelGeneration()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">
+                                Générer
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="xl:col-span-2 space-y-6 flex flex-col">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[350px]">
+                            <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-700 flex items-center gap-2">
+                                    <i class="fa-solid fa-earth-africa text-[#0284c7]"></i> Suivi en Temps Réel (Libreville Map)
+                                </span>
+                                <span class="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-[#0284c7] animate-ping"></span> 3 Véhicules actifs
+                                </span>
+                            </div>
+                            <div id="map-desktop" class="w-full flex-1 bg-slate-100"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="xl:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-700">Dernières Commandes Récentes</h3>
+                            <span class="text-[11px] bg-sky-50 text-[#0284c7] border border-sky-100 px-2 py-0.5 rounded font-medium">Historique</span>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">ID Commande</th>
+                                        <th class="p-3">Origine</th>
+                                        <th class="p-3">Destination</th>
+                                        <th class="p-3">Type Colis</th>
+                                        <th class="p-3">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody" class="divide-y divide-slate-100 text-slate-700">
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="p-3 font-semibold text-[#0284c7]">CG436618</td>
+                                        <td class="p-3">Libreville (Charbonnages)</td>
+                                        <td class="p-3">Owendo Port</td>
+                                        <td class="p-3">Pièces Détachées</td>
+                                        <td class="p-3"><span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-medium">En cours</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="p-3 font-semibold text-[#0284c7]">CG436733</td>
+                                        <td class="p-3">Libreville (Centre Ville)</td>
+                                        <td class="p-3">Akanda (Avorbam)</td>
+                                        <td class="p-3">Électronique</td>
+                                        <td class="p-3"><span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-medium">Livré</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="p-3 font-semibold text-[#0284c7]">CG496738</td>
+                                        <td class="p-3">Libreville (Charbonnages)</td>
+                                        <td class="p-3">PK9 Entrepôt</td>
+                                        <td class="p-3">Marchandises</td>
+                                        <td class="p-3"><span class="bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full text-[10px] font-medium">Planifié</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="xl:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-amber-500"></i> Comptabilité Analytique
+                            </h3>
+                            <p class="text-[11px] text-slate-500 mb-3">Analyse financière mensuelle des livraisons</p>
+                            <div class="w-full aspect-[4/3] flex items-center justify-center bg-slate-50 rounded-lg p-2 border border-slate-100">
+                                <canvas id="analyticsChart"></canvas>
                             </div>
                         </div>
-                    </div>`;
-            });
+                        <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-center">
+                            <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Marge Nette</div>
+                                <div class="text-xs font-bold text-slate-800">74.2%</div>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                                <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Chiffre d'Aff.</div>
+                                <div class="text-xs font-bold text-slate-800">4.8M FCFA</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
 
-            let totalCA = 0; let totalCO = 0;
-            let activeHtml = ""; let archHtml = ""; let livHtml = "";
+        <div id="view-mobile" class="hidden flex-1 overflow-hidden w-full items-center justify-center p-4 md:p-8 bg-slate-800 transition-all duration-300 overflow-y-auto">
+            <div class="w-full max-w-[380px] aspect-[9/19] bg-slate-900 rounded-[40px] shadow-2xl border-[10px] border-slate-950 overflow-hidden flex flex-col relative">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-950 rounded-b-2xl z-50 flex items-center justify-center">
+                    <div class="w-12 h-1 bg-slate-800 rounded-full mb-1"></div>
+                </div>
 
-            localOrders.forEach(o => {
-                if (o.status === "Clôturé") {
-                    totalCA += o.price; totalCO += o.cost;
-                    archHtml += `
-                        <tr class="hover:bg-slate-900/20 transition-colors">
-                            <td class="py-3 px-6 font-mono font-bold text-amber-400">${o.id}</td>
-                            <td class="py-3 px-6 text-white text-sm">${o.customer} <br><span class="text-xs text-slate-500">${o.zone}</span></td>
-                            <td class="py-3 px-6 text-emerald-400 font-medium">${o.price.toLocaleString('fr-FR')} F</td>
-                            <td class="py-3 px-6 text-slate-400">${o.cost.toLocaleString('fr-FR')} F</td>
-                            <td class="py-3 px-6"><span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20">Archivée</span></td>
-                        </tr>`;
-                } else {
-                    activeHtml += `
-                        <tr class="hover:bg-slate-900/20 transition-colors">
-                            <td class="py-3 px-6 font-mono font-bold text-blue-400">${o.id}</td>
-                            <td class="py-3 px-6 text-white text-sm">${o.customer} <br><span class="text-xs text-slate-500">${o.zone}</span></td>
-                            <td class="py-3 px-6 text-white">${o.price.toLocaleString('fr-FR')} F</td>
-                            <td class="py-3 px-6 text-slate-400">${o.cost.toLocaleString('fr-FR')} F</td>
-                            <td class="py-3 px-6 font-mono text-amber-400 font-bold tracking-widest">${o.secretCode}</td>
-                            <td class="py-3 px-6"><span class="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded border border-blue-500/20">En Cours</span></td>
-                        </tr>`;
+                <div class="bg-white border-b border-slate-100 pt-8 pb-3 px-4 flex items-center justify-between shrink-0">
+                    <div>
+                        <span class="text-lg font-black tracking-wider text-[#0284c7]">CG<span class="text-[#eab308]">241</span></span>
+                        <span class="text-[10px] font-bold text-slate-400 block -mt-1">Client App</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <i class="fa-regular fa-bell text-slate-600 text-sm"></i>
+                    </div>
+                </div>
 
-                    livHtml += `
-                        <div class="bg-[#0f172a] border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between hover:border-slate-600 transition-colors">
+                <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 p-4 space-y-4 pb-20">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="alert('Formulaire de commande express client')" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center gap-2 hover:bg-sky-50 group transition-all">
+                            <div class="w-10 h-10 rounded-xl bg-sky-50 group-hover:bg-white text-[#0284c7] flex items-center justify-center shadow-inner text-lg">
+                                <i class="fa-solid fa-box-archive"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-800 leading-tight">Commander une Livraison</span>
+                        </button>
+                        <button onclick="alert('Suivi de colis par numéro')" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center gap-2 hover:bg-sky-50 group transition-all">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 group-hover:bg-white text-amber-500 flex items-center justify-center shadow-inner text-lg">
+                                <i class="fa-solid fa-truck-ramp-box"></i>
+                            </div>
+                            <span class="text-xs font-bold text-slate-800 leading-tight">Suivre un Colis</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-48">
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-slate-700">Live tracker</span>
+                            <span class="text-[9px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">En route</span>
+                        </div>
+                        <div id="map-mobile" class="w-full flex-1 bg-slate-200"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-inner">
+                                <i class="fa-solid fa-star"></i>
+                            </div>
                             <div>
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="text-xs font-mono font-bold text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-800/30">${o.id}</span>
-                                </div>
-                                <h4 class="font-bold text-lg text-white">${o.customer}</h4>
-                                <p class="text-sm text-amber-400 font-medium mt-1">📍 ${o.zone}</p>
+                                <h4 class="text-xs font-bold text-slate-800">Mes Points Fidélité</h4>
+                                <p class="text-[10px] text-slate-400">Gagnez des réductions sur vos livraisons</p>
                             </div>
-                            <div class="pt-4 mt-4 border-t border-slate-800">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Validation Admin</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="verify-${o.id}" placeholder="PIN 4 ch." class="w-full bg-slate-900 border border-slate-700 text-sm rounded-xl px-3 py-2 text-center text-white font-mono focus:border-amber-500 outline-none">
-                                    <button onclick="window.verifyAndCloseMission('${o.id}', '${o.fbId || ''}', 'verify-${o.id}')" class="bg-amber-500 hover:bg-amber-600 text-blue-950 font-bold text-xs px-4 py-2 rounded-xl whitespace-nowrap transition-all shadow-md">
-                                        Valider
-                                    </button>
-                                </div>
-                            </div>
-                        </div>`;
-                }
-            });
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-sm font-black text-slate-800">10</span>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+                        </div>
+                    </div>
+                </div>
 
-            document.getElementById('admin-ca').innerText = totalCA.toLocaleString('fr-FR') + " F";
-            document.getElementById('admin-co').innerText = totalCO.toLocaleString('fr-FR') + " F";
-            document.getElementById('admin-marge').innerText = (totalCA - totalCO).toLocaleString('fr-FR') + " F";
+                <nav class="absolute bottom-0 inset-x-0 bg-white border-t border-slate-100 py-2 px-6 flex items-center justify-between z-40">
+                    <button class="flex flex-col items-center text-[#0284c7]">
+                        <i class="fa-solid fa-house text-sm"></i>
+                        <span class="text-[9px] font-bold mt-0.5">Accueil</span>
+                    </button>
+                    <button class="flex flex-col items-center text-slate-400 hover:text-slate-700">
+                        <i class="fa-solid fa-compass text-sm"></i>
+                        <span class="text-[9px] font-medium mt-0.5">Explorer</span>
+                    </button>
+                    <button class="flex flex-col items-center text-slate-400 hover:text-slate-700 relative">
+                        <i class="fa-solid fa-bell text-sm"></i>
+                        <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span class="text-[9px] font-medium mt-0.5">Alertes</span>
+                    </button>
+                    <button class="flex flex-col items-center text-slate-400 hover:text-slate-700">
+                        <i class="fa-solid fa-user text-sm"></i>
+                        <span class="text-[9px] font-medium mt-0.5">Profil</span>
+                    </button>
+                </nav>
 
-            document.getElementById('admin-orders-tbody').innerHTML = activeHtml || `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">Aucune mission en cours.</td></tr>`;
-            document.getElementById('archives-tbody').innerHTML = archHtml || `<tr><td colspan="5" class="py-6 text-center text-slate-500 italic">Aucune archive disponible.</td></tr>`;
-            document.getElementById('livreur-missions-container').innerHTML = livHtml || `<div class="col-span-full py-8 text-center text-slate-500 bg-slate-900/20 rounded-xl border border-slate-800 border-dashed">Aucune mission sur le terrain pour le moment.</div>`;
+            </div>
+        </div>
 
-            renderChart(totalCA, totalCO, totalCA - totalCO);
-        }
+    </div>
 
-        function renderChart(ca, co, marge) {
-            if (finChart) finChart.destroy();
-            const ctx = document.getElementById('financialChart').getContext('2d');
-            finChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Chiffre d\'Affaires', 'Coûts Logistiques', 'Marge Nette'],
-                    datasets: [{
-                        data: [ca, co, Math.max(0, marge)], // Ne pas afficher une barre négative visuellement dérangeante sans config spécifique
-                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b'],
-                        borderRadius: 6,
-                        barThickness: 45
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', titleColor: '#fff', bodyColor: '#fff' } },
-                    scales: {
-                        y: { grid: { color: 'rgba(30, 41, 59, 0.5)' }, ticks: { color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+    <script>
+        // Programmatic PWA Setup using dynamic blobs to enable self-contained offline capabilities
+        window.addEventListener('load', () => {
+            // Generate Manifest dynamically
+            const manifestObj = {
+                "name": "CG241 Global Logistics Portal",
+                "short_name": "CG241",
+                "start_url": window.location.href,
+                "display": "standalone",
+                "background_color": "#f1f5f9",
+                "theme_color": "#0284c7",
+                "description": "Système de suivi logistique complet et portail de livraison pour CG241 au Gabon.",
+                "icons": [
+                    {
+                        "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128' fill='%230284c7'><rect width='128' height='128' rx='28'/><text x='64' y='78' font-size='42' fill='white' font-weight='black' font-family='sans-serif' text-anchor='middle'>CG</text></svg>",
+                        "sizes": "128x128",
+                        "type": "image/svg+xml"
                     }
+                ]
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+            const manifestURL = URL.createObjectURL(manifestBlob);
+            const linkTag = document.createElement('link');
+            linkTag.rel = 'manifest';
+            linkTag.href = manifestURL;
+            document.head.appendChild(linkTag);
+
+            // Register Service Worker from dynamic inline blob
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'cg241-v1';
+                    self.addEventListener('install', (e) => {
+                        self.skipWaiting();
+                    });
+                    self.addEventListener('activate', (e) => {
+                        e.waitUntil(clients.claim());
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        // Simply proxy everything online, gracefully fallback when connection drops
+                        e.respondWith(
+                            fetch(e.request).catch(() => caches.match(e.request))
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                const swURL = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swURL)
+                    .then(() => console.log('CG241 Service Worker fonctionnel (PWA Blob Actif)'))
+                    .catch(err => console.error('Erreur d\\'enregistrement PWA:', err));
+            }
+
+            // Sync connection status indicators
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            
+            function updateOnlineStatus() {
+                const statusEl = document.getElementById('connection-status');
+                if(navigator.onLine) {
+                    statusEl.className = "flex items-center gap-2 text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200";
+                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Mode Connecté';
+                } else {
+                    statusEl.className = "flex items-center gap-2 text-xs font-medium bg-rose-50 text-rose-700 px-3 py-1.5 rounded-full border border-rose-200";
+                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span> Mode Hors-Ligne';
                 }
+            }
+        });
+
+        // VIEW NAVIGATION TOGGLE
+        function switchView(mode) {
+            const deskView = document.getElementById('view-desktop');
+            const mobView = document.getElementById('view-mobile');
+            const btnDesk = document.getElementById('btn-view-desktop');
+            const btnMob = document.getElementById('btn-view-mobile');
+
+            if(mode === 'desktop') {
+                deskView.classList.remove('hidden');
+                deskView.classList.add('flex');
+                mobView.classList.add('hidden');
+                mobView.classList.remove('flex');
+                btnDesk.className = "px-4 py-1.5 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition-all flex items-center gap-2";
+                btnMob.className = "px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-2";
+                setTimeout(() => { mapDesktop.invalidateSize() }, 100);
+            } else {
+                deskView.classList.add('hidden');
+                deskView.classList.remove('flex');
+                mobView.classList.remove('hidden');
+                mobView.classList.add('flex');
+                btnMob.className = "px-4 py-1.5 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition-all flex items-center gap-2";
+                btnDesk.className = "px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all flex items-center gap-2";
+                setTimeout(() => { mapMobile.invalidateSize() }, 100);
+            }
+        }
+
+        // MAPS INTIALIZATION (Libreville Focus)
+        // Center coordinates for Libreville, Gabon
+        const librevilleCoords = [0.4162, 9.4673];
+        
+        // Initialize Desktop Map
+        const mapDesktop = L.map('map-desktop').setView(librevilleCoords, 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(mapDesktop);
+
+        // Initialize Mobile Map
+        const mapMobile = L.map('map-mobile').setView(librevilleCoords, 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mapMobile);
+
+        // Custom delivery truck icon placeholder using FontAwesome styled HTML markers
+        function createTruckMarker() {
+            return L.divIcon({
+                html: '<div class="w-8 h-8 rounded-full bg-[#0284c7] border-2 border-white flex items-center justify-center text-white shadow-md shadow-slate-400"><i class="fa-solid fa-truck text-[11px]"></i></div>',
+                className: '',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
             });
         }
 
-        // --- NAVIGATION & DOM HELPER ---
-        window.switchTab = (tabId) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('aside nav button').forEach(btn => btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all");
-            document.getElementById('tab-' + tabId).classList.add('active');
-            document.getElementById('btn-' + tabId).className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl bg-amber-500 text-blue-950 shadow-md shadow-amber-500/10 transition-all";
-        };
+        // Add dummy active trucks across Libreville (Charbonnages, Owendo, PK9)
+        const truckLocations = [
+            {coords: [0.4485, 9.4491], name: "Chauffeur Akanda - Colis CG436618"},
+            {coords: [0.3120, 9.5011], name: "Livreur Owendo Port"},
+            {coords: [0.3950, 9.4810], name: "Transit Charbonnages Hub"}
+        ];
 
-        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-        
-        // Init par défaut
-        window.switchTab('vitrine');
+        truckLocations.forEach(loc => {
+            L.marker(loc.coords, {icon: createTruckMarker()}).addTo(mapDesktop).bindPopup(`<b>${loc.name}</b><br>Statut: En mouvement`);
+            L.marker(loc.coords, {icon: createTruckMarker()}).addTo(mapMobile).bindPopup(`<b>${loc.name}</b>`);
+        });
 
+        // FORM HANDLER & REAL-TIME INTERACTION
+        function handleNewOrder(event) {
+            event.preventDefault();
+            const origin = document.getElementById('origin').value;
+            const dest = document.getElementById('destination').value;
+            const weight = document.getElementById('weight').value;
+            const packageType = document.getElementById('packageType').value;
+
+            // Generate random unique order code
+            const randId = 'CG' + Math.floor(100000 + Math.random() * 900000);
+
+            // Add new row to table
+            const tbody = document.getElementById('ordersTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+            newRow.innerHTML = `
+                <td class="p-3 font-semibold text-[#0284c7]">${randId}</td>
+                <td class="p-3">${origin}</td>
+                <td class="p-3">${dest}</td>
+                <td class="p-3">${packageType} (${weight})</td>
+                <td class="p-3"><span class="bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full text-[10px] font-medium">Reçu (Firebase)</span></td>
+            `;
+            tbody.insertBefore(newRow, tbody.firstChild);
+
+            alert(`Félicitations ! Commande enregistrée avec succès. ID: ${randId}`);
+            document.getElementById('orderForm').reset();
+        }
+
+        function triggerLabelGeneration() {
+            alert("Génération de l'étiquette code-barres en cours... Prêt pour impression thermique.");
+        }
+
+        // ANALYTICS CHARTS GENERATION
+        const ctx = document.getElementById('analyticsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Zone Port', 'Zone Nord', 'Zone PK', 'Marseille'],
+                datasets: [{
+                    label: 'Coûts (FCFA)',
+                    data: [150000, 220000, 180000, 240000],
+                    backgroundColor: '#eab308',
+                    borderRadius: 4
+                }, {
+                    label: 'Revenus (FCFA)',
+                    data: [210000, 250000, 190000, 280000],
+                    backgroundColor: '#0284c7',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { font: { size: 10 } } }
+                },
+                scales: {
+                    y: { ticks: { font: { size: 9 } } },
+                    x: { ticks: { font: { size: 9 } } }
+                }
+            }
+        });
     </script>
 </body>
 </html>
+"""
+
+with open("cg241_pwa_portal.html", "w", encoding="utf-8") as f:
+    f.write(pwa_code)
+print("PWA application HTML generated successfully.")
